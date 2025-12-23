@@ -1,0 +1,17 @@
+[Unit]
+Description=Personal Notification Service
+After=network.target redis.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/pns
+ExecStart=/opt/pns/server
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/pns/pns.log
+StandardError=append:/var/log/pns/pns.log
+
+[Install]
+WantedBy=multi-user.target
