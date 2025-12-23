@@ -1,0 +1,24 @@
+# Binaries
+# server
+notification-app
+*.exe
+
+# Environment files
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+coverage.out
+*.test
+
+# Vendor (if using)
+vendor/

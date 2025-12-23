@@ -1,0 +1,44 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8272:8272"
+    environment:
+      - PORT=8272
+      - LOG_LEVEL=info
+      - API_KEYS=${API_KEYS:-your-api-key-here}
+      - RATE_LIMIT_PER_MINUTE=60
+      - REDIS_ADDR=redis:6379
+      - REDIS_PASSWORD=
+      - REDIS_DB=0
+      - WORKER_CONCURRENCY=10
+      - MAX_RETRIES=5
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - SHUTDOWN_TIMEOUT_SECONDS=30
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8272/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  redis_data:
