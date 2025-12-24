@@ -27,7 +27,7 @@ func NewRouter(cfg *config.Config, limiter *ratelimit.Limiter, client *queue.Cli
 	handler := NewHandler(validator, limiter, client, logger)
 
 	// Public routes (no auth required)
-	r.Get("/health", handler.HandleHealth)
+	r.Get("/notify/health", handler.HandleHealth)
 
 	// Protected routes
 	r.Group(func(r chi.Router) {

@@ -50,7 +50,7 @@ cp .env.example .env
 
 Edit `.env` with your values:
 
-```bash
+```bash6577114265:AAGelRxsh0tz1YXCx0Ms6pa5fMC0oEVqhLY
 # Generate a secure API key
 API_KEYS=$(openssl rand -hex 32)
 
@@ -71,7 +71,7 @@ docker-compose up -d
 
 ```bash
 # Health check
-curl http://localhost:8272/health
+curl http://localhost:8272/notify/health
 
 # Send a notification
 curl -X POST http://localhost:8272/notify \
