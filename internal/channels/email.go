@@ -36,7 +36,8 @@ func (e *EmailChannel) Send(ctx context.Context, n *notification.Notification) e
 	// TODO: Implement email sending
 	// Example implementation:
 	// 1. Format email with subject: "[LEVEL] Title" and body: Message
-	// 2. Connect to SMTP server
-	// 3. Send email
+	// 2. Append source if provided: "Source: <source>"
+	// 3. Connect to SMTP server
+	// 4. Send email
 	return ErrEmailNotImplemented
 }

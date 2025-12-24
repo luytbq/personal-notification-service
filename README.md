@@ -81,7 +81,8 @@ curl -X POST http://localhost:8272/notify \
     "title": "Test Notification",
     "message": "Hello from the notification app!",
     "level": "info",
-    "channel": ["telegram"]
+    "channel": ["telegram"],
+    "source": "my-automation-script"
   }'
 ```
 
@@ -102,7 +103,8 @@ Send a notification.
   "title": "Backup failed",
   "message": "Disk space full on VPS-01",
   "level": "error",
-  "channel": ["telegram"]
+  "channel": ["telegram"],
+  "source": "backup-script"
 }
 ```
 
@@ -114,6 +116,7 @@ Send a notification.
 | `message` | string | Yes | Notification message body |
 | `level` | string | Yes | One of: `info`, `warning`, `error`, `critical` |
 | `channel` | array | Yes | List of channels: `telegram`, `email` |
+| `source` | string | No | Source identifier (e.g., script name, service name) |
 
 **Response (202 Accepted):**
 
@@ -180,6 +183,8 @@ Example Telegram message:
 [ERROR] Backup failed
 
 Disk space full on VPS-01
+
+Source: backup-script
 ```
 
 ## Rate Limiting

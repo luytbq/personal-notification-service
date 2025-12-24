@@ -59,6 +59,11 @@ func (t *TelegramChannel) Send(ctx context.Context, n *notification.Notification
 	// TODO: Try other parse modes (Markdown, HTML) for richer formatting
 	text := fmt.Sprintf("%s %s\n\n%s", n.Level.Prefix(), n.Title, n.Message)
 
+	// Append source if provided
+	if n.Source != "" {
+		text = fmt.Sprintf("%s\n\nSource: %s", text, n.Source)
+	}
+
 	msg := telegramMessage{
 		ChatID: t.chatID,
 		Text:   text,

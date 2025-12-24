@@ -56,6 +56,7 @@ type Request struct {
 	Message  string    `json:"message"`
 	Level    Level     `json:"level"`
 	Channels []Channel `json:"channel"`
+	Source   string    `json:"source,omitempty"`
 }
 
 // Notification represents a notification to be sent
@@ -67,6 +68,7 @@ type Notification struct {
 	Channel   Channel   `json:"channel"`
 	APIKey    string    `json:"api_key"`
 	CreatedAt time.Time `json:"created_at"`
+	Source    string    `json:"source,omitempty"`
 }
 
 // Response represents the API response for a notification request
