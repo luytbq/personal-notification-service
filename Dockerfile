@@ -3,9 +3,6 @@ FROM golang:1.23-alpine AS builder
 
 WORKDIR /app
 
-# Install ca-certificates for HTTPS requests
-RUN apk --no-cache add ca-certificates
-
 # Copy go mod files first for better caching
 COPY go.mod go.sum ./
 RUN go mod download
