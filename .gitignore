@@ -5,6 +5,7 @@ notification-app
 
 # Environment files
 .env
+webhooks.json
 
 # IDE
 .idea/

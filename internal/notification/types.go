@@ -40,8 +40,9 @@ func (l Level) Prefix() string {
 type Channel string
 
 const (
-	ChannelTelegram Channel = "telegram"
-	ChannelEmail    Channel = "email"
+	ChannelTelegram      Channel = "telegram"
+	ChannelEmail         Channel = "email"
+	ChannelWebhookPrefix         = "webhook:"
 )
 
 // ValidChannels contains all valid notification channels

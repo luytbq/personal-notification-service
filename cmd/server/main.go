@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -44,6 +45,20 @@ func main() {
 	registry.Register(channels.NewTelegramChannel(cfg.TelegramBotToken, cfg.TelegramChatID))
 	// Email channel is scaffolded but not implemented
 	// registry.Register(channels.NewEmailChannel())
+
+	// Load and register webhook channels from webhooks.json (optional)
+	webhookConfigs, err := loadWebhookConfigs(cfg.WebhooksFile)
+	if err != nil {
+		logger.Warn("could not load webhooks file, skipping webhook channels",
+			slog.String("file", cfg.WebhooksFile),
+			slog.String("error", err.Error()),
+		)
+	}
+	for _, wc := range webhookConfigs {
+		ch := channels.NewWebhookChannel(wc)
+		registry.Register(ch)
+		logger.Info("registered webhook channel", slog.String("name", string(ch.Name())))
+	}
 
 	// Setup rate limiter
 	limiter := ratelimit.NewLimiter(cfg.RateLimitPerMinute)
@@ -134,6 +149,18 @@ func main() {
 	logger.Info("worker stopped")
 
 	logger.Info("shutdown complete")
+}
+
+func loadWebhookConfigs(path string) ([]channels.WebhookConfig, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var configs []channels.WebhookConfig
+	if err := json.Unmarshal(data, &configs); err != nil {
+		return nil, err
+	}
+	return configs, nil
 }
 
 func setupLogger() *slog.Logger {

@@ -34,6 +34,9 @@ type Config struct {
 	TelegramBotToken string `envconfig:"TELEGRAM_BOT_TOKEN" required:"true"`
 	TelegramChatID   string `envconfig:"TELEGRAM_CHAT_ID" required:"true"`
 
+	// Webhooks
+	WebhooksFile string `envconfig:"WEBHOOKS_FILE" default:"webhooks.json"`
+
 	// Graceful Shutdown
 	ShutdownTimeoutSeconds int `envconfig:"SHUTDOWN_TIMEOUT_SECONDS" default:"30"`
 }

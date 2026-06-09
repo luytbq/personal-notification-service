@@ -10,7 +10,7 @@ var (
 	ErrEmptyMessage   = errors.New("message is required")
 	ErrInvalidLevel   = errors.New("invalid level: must be one of info, warning, error, critical")
 	ErrEmptyChannels  = errors.New("at least one channel is required")
-	ErrInvalidChannel = errors.New("invalid channel: must be one of telegram, email")
+	ErrInvalidChannel = errors.New("invalid channel: must be one of telegram, email, or webhook:<name>")
 )
 
 // Validator validates notification requests
@@ -44,7 +44,7 @@ func (v *Validator) Validate(req *Request) error {
 	}
 
 	for _, ch := range req.Channels {
-		if !ValidChannels[ch] {
+		if !ValidChannels[ch] && !strings.HasPrefix(string(ch), ChannelWebhookPrefix) {
 			return ErrInvalidChannel
 		}
 	}
