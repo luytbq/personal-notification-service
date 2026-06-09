@@ -64,6 +64,10 @@ func (t *TelegramChannel) Send(ctx context.Context, n *notification.Notification
 		text = fmt.Sprintf("%s\n\nSource: %s", text, n.Source)
 	}
 
+	// Append timestamp
+	timestamp := n.CreatedAt.Format("2006-01-02 15:04:05")
+	text = fmt.Sprintf("%s\nTimestamp: %s", text, timestamp)
+
 	msg := telegramMessage{
 		ChatID: t.chatID,
 		Text:   text,

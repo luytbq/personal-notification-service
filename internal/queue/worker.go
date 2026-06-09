@@ -124,6 +124,7 @@ func (w *Worker) handleNotification(ctx context.Context, task *asynq.Task) error
 		Channel:   payload.Channel,
 		APIKey:    payload.APIKey,
 		CreatedAt: payload.CreatedAt,
+		Source:    payload.Source,
 	}
 
 	// Send the notification

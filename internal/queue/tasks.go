@@ -37,6 +37,7 @@ type NotificationPayload struct {
 	Channel   notification.Channel `json:"channel"`
 	APIKey    string               `json:"api_key"`
 	CreatedAt time.Time            `json:"created_at"`
+	Source    string               `json:"source,omitempty"`
 }
 
 // NewNotificationTask creates a new notification task
@@ -49,6 +50,7 @@ func NewNotificationTask(n *notification.Notification, taskType string) (*asynq.
 		Channel:   n.Channel,
 		APIKey:    n.APIKey,
 		CreatedAt: n.CreatedAt,
+		Source:    n.Source,
 	}
 
 	data, err := json.Marshal(payload)

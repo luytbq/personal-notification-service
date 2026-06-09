@@ -54,6 +54,15 @@ func (h *Handler) HandleNotify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Log incoming request
+	h.logger.Info("incoming notification request",
+		slog.String("title", req.Title),
+		slog.String("message", req.Message),
+		slog.String("level", string(req.Level)),
+		slog.Any("channels", req.Channels),
+		slog.String("source", req.Source),
+	)
+
 	// Validate request
 	if err := h.validator.Validate(&req); err != nil {
 		h.logger.Warn("validation failed",

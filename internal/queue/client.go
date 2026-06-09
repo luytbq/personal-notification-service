@@ -54,6 +54,7 @@ func (c *Client) Enqueue(req *notification.Request, apiKey string) ([]string, er
 			Channel:   channel,
 			APIKey:    apiKey,
 			CreatedAt: now,
+			Source:    req.Source,
 		}
 
 		task, err := NewNotificationTask(n, c.queueNames.TaskType)
