@@ -19,7 +19,7 @@ GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o server ./cmd/server
 echo "Deploying to $SERVER_HOST..."
 ssh $SERVER_HOST "sudo systemctl stop $SERVICE_NAME 2>/dev/null || true"
 ssh $SERVER_HOST "sudo mkdir -p $REMOTE_DIR $LOG_DIR && sudo chown www-data:www-data $LOG_DIR"
-scp server .env $SERVER_HOST:$REMOTE_DIR/
+scp server config.yaml $SERVER_HOST:$REMOTE_DIR/
 scp pns.service $SERVER_HOST:/tmp/
 scp pns.logrotate $SERVER_HOST:/tmp/
 ssh $SERVER_HOST "sudo mv /tmp/pns.service /etc/systemd/system/"

@@ -1,7 +1,0 @@
-[
-  {
-    "name": "notifeed",
-    "url": "http://localhost:8080/webhook/pns",
-    "secret": "change-me"
-  }
-]

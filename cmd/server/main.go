@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -11,7 +10,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/joho/godotenv"
 	"github.com/luytbq/personal-notification-service/internal/api"
 	"github.com/luytbq/personal-notification-service/internal/channels"
 	"github.com/luytbq/personal-notification-service/internal/config"
@@ -20,13 +18,8 @@ import (
 )
 
 func main() {
-	// Load .env file if it exists (ignore error if not found)
-	_ = godotenv.Load()
-
-	// Setup logger
 	logger := setupLogger()
 
-	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
 		logger.Error("failed to load configuration", slog.String("error", err.Error()))
@@ -34,144 +27,100 @@ func main() {
 	}
 
 	logger.Info("configuration loaded",
-		slog.Int("port", cfg.Port),
+		slog.Int("port", cfg.Server.Port),
 		slog.Int("rate_limit_per_minute", cfg.RateLimitPerMinute),
-		slog.Int("worker_concurrency", cfg.WorkerConcurrency),
-		slog.Int("max_retries", cfg.MaxRetries),
+		slog.Int("worker_concurrency", cfg.Worker.Concurrency),
+		slog.Int("max_retries", cfg.Worker.MaxRetries),
 	)
 
-	// Setup channel registry
 	registry := channels.NewRegistry()
-	registry.Register(channels.NewTelegramChannel(cfg.TelegramBotToken, cfg.TelegramChatID))
+	registry.Register(channels.NewTelegramChannel(cfg.Telegram.BotToken, cfg.Telegram.ChatID))
 	// Email channel is scaffolded but not implemented
 	// registry.Register(channels.NewEmailChannel())
 
-	// Load and register webhook channels from webhooks.json (optional)
-	webhookConfigs, err := loadWebhookConfigs(cfg.WebhooksFile)
-	if err != nil {
-		logger.Warn("could not load webhooks file, skipping webhook channels",
-			slog.String("file", cfg.WebhooksFile),
-			slog.String("error", err.Error()),
-		)
-	}
-	for _, wc := range webhookConfigs {
-		ch := channels.NewWebhookChannel(wc)
+	for _, wc := range cfg.Webhooks {
+		ch := channels.NewWebhookChannel(wc.Name, wc.URL, wc.Secret)
 		registry.Register(ch)
 		logger.Info("registered webhook channel", slog.String("name", string(ch.Name())))
 	}
 
-	// Setup rate limiter
 	limiter := ratelimit.NewLimiter(cfg.RateLimitPerMinute)
 
-	// Setup queue names with prefix
-	queueNames := queue.NewQueueNames(cfg.RedisKeyPrefix)
+	queueNames := queue.NewQueueNames(cfg.Redis.KeyPrefix)
 	logger.Info("queue names configured",
-		slog.String("prefix", cfg.RedisKeyPrefix),
+		slog.String("prefix", cfg.Redis.KeyPrefix),
 		slog.String("notifications_queue", queueNames.Notifications),
 		slog.String("task_type", queueNames.TaskType),
 	)
 
-	// Setup queue client
 	queueClient := queue.NewClient(
-		cfg.RedisAddr,
-		cfg.RedisPassword,
-		cfg.RedisDB,
-		cfg.MaxRetries,
+		cfg.Redis.Addr,
+		cfg.Redis.Password,
+		cfg.Redis.DB,
+		cfg.Worker.MaxRetries,
 		logger,
 		queueNames,
 	)
 	defer queueClient.Close()
 
-	// Setup worker
 	worker := queue.NewWorker(
-		cfg.RedisAddr,
-		cfg.RedisPassword,
-		cfg.RedisDB,
-		cfg.WorkerConcurrency,
+		cfg.Redis.Addr,
+		cfg.Redis.Password,
+		cfg.Redis.DB,
+		cfg.Worker.Concurrency,
 		registry,
 		logger,
 		queueNames,
 	)
 
-	// Setup HTTP router
 	router := api.NewRouter(cfg, limiter, queueClient, logger)
 
-	// Create HTTP server
 	server := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.Port),
+		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
 		Handler:      router,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// Start worker in a goroutine
 	go func() {
-		logger.Info("starting worker",
-			slog.Int("concurrency", cfg.WorkerConcurrency),
-		)
+		logger.Info("starting worker", slog.Int("concurrency", cfg.Worker.Concurrency))
 		if err := worker.Start(); err != nil {
 			logger.Error("worker failed to start", slog.String("error", err.Error()))
 		}
 	}()
 
-	// Start HTTP server in a goroutine
 	go func() {
-		logger.Info("starting HTTP server",
-			slog.Int("port", cfg.Port),
-		)
+		logger.Info("starting HTTP server", slog.Int("port", cfg.Server.Port))
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Error("HTTP server failed", slog.String("error", err.Error()))
 			os.Exit(1)
 		}
 	}()
 
-	// Wait for interrupt signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
 	logger.Info("shutting down...")
 
-	// Create shutdown context with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.ShutdownTimeoutSeconds)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.Server.ShutdownTimeoutSeconds)*time.Second)
 	defer cancel()
 
-	// Shutdown HTTP server first (stop accepting new requests)
 	if err := server.Shutdown(ctx); err != nil {
 		logger.Error("HTTP server shutdown error", slog.String("error", err.Error()))
 	} else {
 		logger.Info("HTTP server stopped")
 	}
 
-	// Shutdown worker (wait for in-flight tasks)
 	worker.Shutdown()
 	logger.Info("worker stopped")
-
 	logger.Info("shutdown complete")
 }
 
-func loadWebhookConfigs(path string) ([]channels.WebhookConfig, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	var configs []channels.WebhookConfig
-	if err := json.Unmarshal(data, &configs); err != nil {
-		return nil, err
-	}
-	return configs, nil
-}
-
 func setupLogger() *slog.Logger {
-	opts := &slog.HandlerOptions{
-		Level: slog.LevelInfo,
-	}
-
-	// Use JSON handler for structured logging
-	handler := slog.NewJSONHandler(os.Stdout, opts)
+	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})
 	logger := slog.New(handler)
 	slog.SetDefault(logger)
-
 	return logger
 }

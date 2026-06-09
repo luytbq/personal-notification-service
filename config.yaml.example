@@ -1,0 +1,30 @@
+server:
+  port: 8272
+  log_level: info
+  shutdown_timeout_seconds: 30
+
+api_keys:
+  - your-api-key-1
+  - your-api-key-2
+
+rate_limit_per_minute: 60
+
+redis:
+  addr: localhost:6379
+  password: ""
+  db: 0
+  key_prefix: pns
+
+worker:
+  concurrency: 10
+  max_retries: 5
+
+telegram:
+  bot_token: "123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
+  chat_id: "123456789"
+
+# Optional: webhook targets (channel name: "webhook:<name>")
+# webhooks:
+#   - name: notifeed
+#     url: http://localhost:8080/webhook/pns
+#     secret: change-me

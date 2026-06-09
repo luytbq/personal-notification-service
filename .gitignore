@@ -3,9 +3,9 @@
 notification-app
 *.exe
 
-# Environment files
+# Config and env files (contain secrets)
+config.yaml
 .env
-webhooks.json
 
 # IDE
 .idea/

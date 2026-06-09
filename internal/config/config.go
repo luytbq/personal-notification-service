@@ -2,69 +2,110 @@ package config
 
 import (
 	"fmt"
-	"strings"
+	"os"
 
-	"github.com/kelseyhightower/envconfig"
+	"gopkg.in/yaml.v3"
 )
 
-// Config holds all configuration for the application
-type Config struct {
-	// Server
-	Port     int    `envconfig:"PORT" default:"8272"`
-	LogLevel string `envconfig:"LOG_LEVEL" default:"info"`
-
-	// Authentication - comma-separated list of API keys
-	APIKeysRaw string `envconfig:"API_KEYS" required:"true"`
-	APIKeys    map[string]bool
-
-	// Rate Limiting
-	RateLimitPerMinute int `envconfig:"RATE_LIMIT_PER_MINUTE" default:"60"`
-
-	// Redis
-	RedisAddr      string `envconfig:"REDIS_ADDR" default:"localhost:6379"`
-	RedisPassword  string `envconfig:"REDIS_PASSWORD" default:""`
-	RedisDB        int    `envconfig:"REDIS_DB" default:"0"`
-	RedisKeyPrefix string `envconfig:"REDIS_KEY_PREFIX" default:"pns"`
-
-	// Worker
-	WorkerConcurrency int `envconfig:"WORKER_CONCURRENCY" default:"10"`
-	MaxRetries        int `envconfig:"MAX_RETRIES" default:"5"`
-
-	// Telegram
-	TelegramBotToken string `envconfig:"TELEGRAM_BOT_TOKEN" required:"true"`
-	TelegramChatID   string `envconfig:"TELEGRAM_CHAT_ID" required:"true"`
-
-	// Webhooks
-	WebhooksFile string `envconfig:"WEBHOOKS_FILE" default:"webhooks.json"`
-
-	// Graceful Shutdown
-	ShutdownTimeoutSeconds int `envconfig:"SHUTDOWN_TIMEOUT_SECONDS" default:"30"`
+type ServerConfig struct {
+	Port                   int    `yaml:"port"`
+	LogLevel               string `yaml:"log_level"`
+	ShutdownTimeoutSeconds int    `yaml:"shutdown_timeout_seconds"`
 }
 
-// Load reads configuration from environment variables
+type RedisConfig struct {
+	Addr      string `yaml:"addr"`
+	Password  string `yaml:"password"`
+	DB        int    `yaml:"db"`
+	KeyPrefix string `yaml:"key_prefix"`
+}
+
+type WorkerConfig struct {
+	Concurrency int `yaml:"concurrency"`
+	MaxRetries  int `yaml:"max_retries"`
+}
+
+type TelegramConfig struct {
+	BotToken string `yaml:"bot_token"`
+	ChatID   string `yaml:"chat_id"`
+}
+
+type WebhookTarget struct {
+	Name   string `yaml:"name"`
+	URL    string `yaml:"url"`
+	Secret string `yaml:"secret"`
+}
+
+// Config holds all application configuration
+type Config struct {
+	Server             ServerConfig   `yaml:"server"`
+	APIKeys            []string       `yaml:"api_keys"`
+	RateLimitPerMinute int            `yaml:"rate_limit_per_minute"`
+	Redis              RedisConfig    `yaml:"redis"`
+	Worker             WorkerConfig   `yaml:"worker"`
+	Telegram           TelegramConfig `yaml:"telegram"`
+	Webhooks           []WebhookTarget `yaml:"webhooks"`
+	apiKeysMap         map[string]bool
+}
+
+// Load reads configuration from a YAML file.
+// Path is taken from PNS_CONFIG env var, defaulting to config.yaml.
 func Load() (*Config, error) {
-	var cfg Config
-	if err := envconfig.Process("", &cfg); err != nil {
-		return nil, fmt.Errorf("failed to process env config: %w", err)
+	path := os.Getenv("PNS_CONFIG")
+	if path == "" {
+		path = "config.yaml"
 	}
 
-	// Parse comma-separated API keys into a map for O(1) lookup
-	cfg.APIKeys = make(map[string]bool)
-	for _, key := range strings.Split(cfg.APIKeysRaw, ",") {
-		trimmed := strings.TrimSpace(key)
-		if trimmed != "" {
-			cfg.APIKeys[trimmed] = true
-		}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config file %q: %w", path, err)
+	}
+
+	cfg := &Config{
+		Server: ServerConfig{
+			Port:                   8272,
+			LogLevel:               "info",
+			ShutdownTimeoutSeconds: 30,
+		},
+		RateLimitPerMinute: 60,
+		Redis: RedisConfig{
+			Addr:      "localhost:6379",
+			DB:        0,
+			KeyPrefix: "pns",
+		},
+		Worker: WorkerConfig{
+			Concurrency: 10,
+			MaxRetries:  5,
+		},
+	}
+
+	if err := yaml.Unmarshal(data, cfg); err != nil {
+		return nil, fmt.Errorf("failed to parse config file %q: %w", path, err)
 	}
 
 	if len(cfg.APIKeys) == 0 {
-		return nil, fmt.Errorf("at least one API key must be configured")
+		return nil, fmt.Errorf("at least one api_key must be configured")
 	}
 
-	return &cfg, nil
+	if cfg.Telegram.BotToken == "" {
+		return nil, fmt.Errorf("telegram.bot_token is required")
+	}
+
+	if cfg.Telegram.ChatID == "" {
+		return nil, fmt.Errorf("telegram.chat_id is required")
+	}
+
+	cfg.apiKeysMap = make(map[string]bool, len(cfg.APIKeys))
+	for _, key := range cfg.APIKeys {
+		if key != "" {
+			cfg.apiKeysMap[key] = true
+		}
+	}
+
+	return cfg, nil
 }
 
 // ValidateAPIKey checks if the provided API key is valid
 func (c *Config) ValidateAPIKey(key string) bool {
-	return c.APIKeys[key]
+	return c.apiKeysMap[key]
 }

@@ -14,13 +14,6 @@ import (
 	"github.com/luytbq/personal-notification-service/internal/notification"
 )
 
-// WebhookConfig holds configuration for a single webhook target
-type WebhookConfig struct {
-	Name   string `json:"name"`
-	URL    string `json:"url"`
-	Secret string `json:"secret"`
-}
-
 // WebhookChannel sends notifications via HTTP POST with HMAC-SHA256 signature
 type WebhookChannel struct {
 	name   notification.Channel
@@ -29,12 +22,12 @@ type WebhookChannel struct {
 	client *http.Client
 }
 
-// NewWebhookChannel creates a new WebhookChannel from config
-func NewWebhookChannel(cfg WebhookConfig) *WebhookChannel {
+// NewWebhookChannel creates a new WebhookChannel
+func NewWebhookChannel(name, url, secret string) *WebhookChannel {
 	return &WebhookChannel{
-		name:   notification.Channel(notification.ChannelWebhookPrefix + cfg.Name),
-		url:    cfg.URL,
-		secret: cfg.Secret,
+		name:   notification.Channel(notification.ChannelWebhookPrefix + name),
+		url:    url,
+		secret: secret,
 		client: &http.Client{Timeout: 30 * time.Second},
 	}
 }
