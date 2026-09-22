@@ -76,7 +76,7 @@ func main() {
 	router := api.NewRouter(cfg, limiter, queueClient, logger)
 
 	server := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
+		Addr:         fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port),
 		Handler:      router,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
@@ -91,7 +91,10 @@ func main() {
 	}()
 
 	go func() {
-		logger.Info("starting HTTP server", slog.Int("port", cfg.Server.Port))
+		logger.Info("starting HTTP server",
+			slog.String("host", cfg.Server.Host),
+			slog.Int("port", cfg.Server.Port),
+		)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Error("HTTP server failed", slog.String("error", err.Error()))
 			os.Exit(1)

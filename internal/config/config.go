@@ -8,6 +8,9 @@ import (
 )
 
 type ServerConfig struct {
+	// Host is the bind address. Defaults to loopback; set 0.0.0.0 only when the
+	// process runs in a container and the port is published by the runtime.
+	Host                   string `yaml:"host"`
 	Port                   int    `yaml:"port"`
 	LogLevel               string `yaml:"log_level"`
 	ShutdownTimeoutSeconds int    `yaml:"shutdown_timeout_seconds"`
@@ -38,12 +41,12 @@ type WebhookTarget struct {
 
 // Config holds all application configuration
 type Config struct {
-	Server             ServerConfig   `yaml:"server"`
-	APIKeys            []string       `yaml:"api_keys"`
-	RateLimitPerMinute int            `yaml:"rate_limit_per_minute"`
-	Redis              RedisConfig    `yaml:"redis"`
-	Worker             WorkerConfig   `yaml:"worker"`
-	Telegram           TelegramConfig `yaml:"telegram"`
+	Server             ServerConfig    `yaml:"server"`
+	APIKeys            []string        `yaml:"api_keys"`
+	RateLimitPerMinute int             `yaml:"rate_limit_per_minute"`
+	Redis              RedisConfig     `yaml:"redis"`
+	Worker             WorkerConfig    `yaml:"worker"`
+	Telegram           TelegramConfig  `yaml:"telegram"`
 	Webhooks           []WebhookTarget `yaml:"webhooks"`
 	apiKeysMap         map[string]bool
 }
@@ -63,6 +66,7 @@ func Load() (*Config, error) {
 
 	cfg := &Config{
 		Server: ServerConfig{
+			Host:                   "127.0.0.1",
 			Port:                   8272,
 			LogLevel:               "info",
 			ShutdownTimeoutSeconds: 30,

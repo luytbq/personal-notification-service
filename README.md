@@ -42,28 +42,35 @@ Automation Tool → API Server → Redis Queue → Worker → Telegram
    ```
    Or visit: `https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates` in your browser
 
-### 2. Configure Environment
+### 2. Write the config file
 
 ```bash
-cp .env.example .env
+cp config.yaml.example config.yaml
 ```
 
-Edit `.env` with your values:
+Edit `config.yaml` with your values. Generate the API key rather than inventing one:
 
-```bash6577114265:AAGelRxsh0tz1YXCx0Ms6pa5fMC0oEVqhLY
-# Generate a secure API key
-API_KEYS=$(openssl rand -hex 32)
-
-# Your Telegram bot token
-TELEGRAM_BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz
-
-# Your Telegram chat ID
-TELEGRAM_CHAT_ID=123456789
+```bash
+openssl rand -hex 32
 ```
+
+At minimum set `api_keys`, `telegram.bot_token` and `telegram.chat_id`.
 
 ### 3. Run with Docker Compose
 
+Compose reads a separate config so the container can use service names instead of
+`localhost`:
+
 ```bash
+cp config.yaml config.docker.yaml
+```
+
+In `config.docker.yaml` set `server.host` to `0.0.0.0` and `redis.addr` to
+`redis:6379`, then put the Redis password in `.env` under `REDIS_PASSWORD` so the
+Redis container and the app agree on it:
+
+```bash
+echo "REDIS_PASSWORD=$(openssl rand -base64 32)" >> .env
 docker-compose up -d
 ```
 
@@ -150,22 +157,29 @@ Health check endpoint.
 
 ## Configuration
 
-All configuration is via environment variables:
+All configuration lives in a single YAML file. The path comes from the `PNS_CONFIG`
+environment variable and defaults to `config.yaml` in the working directory. No other
+environment variable is read. See `config.yaml.example` for the full file.
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `8272` | HTTP server port |
-| `LOG_LEVEL` | `info` | Log level |
-| `API_KEYS` | (required) | Comma-separated list of valid API keys |
-| `RATE_LIMIT_PER_MINUTE` | `60` | Rate limit per API key per channel |
-| `REDIS_ADDR` | `localhost:6379` | Redis address |
-| `REDIS_PASSWORD` | (empty) | Redis password |
-| `REDIS_DB` | `0` | Redis database number |
-| `WORKER_CONCURRENCY` | `10` | Number of concurrent workers |
-| `MAX_RETRIES` | `5` | Maximum retry attempts |
-| `TELEGRAM_BOT_TOKEN` | (required) | Telegram bot token |
-| `TELEGRAM_CHAT_ID` | (required) | Telegram chat ID |
-| `SHUTDOWN_TIMEOUT_SECONDS` | `30` | Graceful shutdown timeout |
+| Key | Default | Description |
+|-----|---------|-------------|
+| `server.host` | `127.0.0.1` | Bind address. Use `0.0.0.0` only when a container runtime publishes the port |
+| `server.port` | `8272` | HTTP server port |
+| `server.log_level` | `info` | Log level |
+| `server.shutdown_timeout_seconds` | `30` | Graceful shutdown timeout |
+| `api_keys` | (required) | List of valid API keys |
+| `rate_limit_per_minute` | `60` | Rate limit per API key per channel |
+| `redis.addr` | `localhost:6379` | Redis address |
+| `redis.password` | (empty) | Redis password |
+| `redis.db` | `0` | Redis database number |
+| `redis.key_prefix` | `pns` | Prefix for queue and task names |
+| `worker.concurrency` | `10` | Number of concurrent workers |
+| `worker.max_retries` | `5` | Maximum retry attempts |
+| `telegram.bot_token` | (required) | Telegram bot token |
+| `telegram.chat_id` | (required) | Telegram chat ID |
+| `webhooks` | (empty) | Webhook targets, addressed as channel `webhook:<name>` |
+
+`config.yaml` holds live credentials and is gitignored. Keep it that way.
 
 ## Notification Levels
 
@@ -215,13 +229,11 @@ Structured JSON logs to stdout:
 # Install dependencies
 go mod download
 
-# Run Redis locally
-docker run -d -p 6379:6379 redis:7-alpine
+# Run Redis locally, on loopback only
+docker run -d -p 127.0.0.1:6379:6379 redis:8.4-alpine
 
-# Set environment variables
-export API_KEYS=dev-key
-export TELEGRAM_BOT_TOKEN=your-token
-export TELEGRAM_CHAT_ID=your-chat-id
+# Write your config
+cp config.yaml.example config.yaml
 
 # Run the application
 go run ./cmd/server
@@ -258,7 +270,7 @@ notification-app/
 ├── docker-compose.yml
 ├── go.mod
 ├── go.sum
-├── .env.example
+├── config.yaml.example
 └── README.md
 ```
 

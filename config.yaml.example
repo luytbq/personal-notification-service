@@ -1,4 +1,6 @@
 server:
+  # 0.0.0.0 only when a container runtime publishes the port; behind nginx use loopback
+  host: 127.0.0.1
   port: 8272
   log_level: info
   shutdown_timeout_seconds: 30
@@ -11,7 +13,7 @@ rate_limit_per_minute: 60
 
 redis:
   addr: localhost:6379
-  password: ""
+  password: "change-me"
   db: 0
   key_prefix: pns
 

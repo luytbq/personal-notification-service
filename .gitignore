@@ -5,6 +5,7 @@ notification-app
 
 # Config and env files (contain secrets)
 config.yaml
+config.docker.yaml
 .env
 
 # IDE
