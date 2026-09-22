@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/luytbq/personal-notification-service/internal/notification"
@@ -79,16 +81,16 @@ func (t *TelegramChannel) Send(ctx context.Context, n *notification.Notification
 		return fmt.Errorf("failed to marshal telegram message: %w", err)
 	}
 
-	url := fmt.Sprintf(telegramAPIURL, t.botToken)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	endpoint := fmt.Sprintf(telegramAPIURL, t.botToken)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
 	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
+		return fmt.Errorf("failed to create request: %w", stripURL(err))
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := t.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to send telegram message: %w", err)
+		return fmt.Errorf("failed to send telegram message: %w", stripURL(err))
 	}
 	defer resp.Body.Close()
 
@@ -107,4 +109,14 @@ func (t *TelegramChannel) Send(ctx context.Context, n *notification.Notification
 	}
 
 	return nil
+}
+
+// stripURL drops the request URL from net/http errors. The Telegram URL embeds
+// the bot token, and these errors end up in logs and in asynq task metadata in Redis.
+func stripURL(err error) error {
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) {
+		return fmt.Errorf("%s: %w", urlErr.Op, urlErr.Err)
+	}
+	return err
 }
